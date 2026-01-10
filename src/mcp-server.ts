@@ -17,15 +17,16 @@ async function main() {
     CallToolRequestSchema,
     ListToolsRequestSchema,
   } = await import("@modelcontextprotocol/sdk/types.js");
-  const { zodToJsonSchema } = await import("zod-to-json-schema");
+  const { z } = await import("zod");
   const { TOOLS } = await import("./tools/index.js");
 
   // Helper to convert tool schema to JSON Schema
+  // Uses Zod v4's built-in toJSONSchema for proper conversion
   function getJsonSchema(schema: unknown): object {
-    // Check if it's a Zod schema (has _def property)
-    if (schema && typeof schema === "object" && "_def" in schema) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return zodToJsonSchema(schema as any);
+    // Check if it's a Zod schema (has _zod property for v4)
+    if (schema && typeof schema === "object" && "_zod" in schema) {
+      // Use Zod v4's built-in JSON Schema conversion
+      return z.toJSONSchema(schema as z.ZodType);
     }
     // Already a JSON schema or unknown format
     return (schema as object) || { type: "object", properties: {} };
