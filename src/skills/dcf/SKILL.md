@@ -10,14 +10,16 @@ description: Performs discounted cash flow (DCF) valuation analysis to estimate 
 Copy and track progress:
 ```
 DCF Analysis Progress:
-- [ ] Step 1: Gather financial data
+- [ ] Step 1: Gather financial data (including peer group)
 - [ ] Step 2: Calculate FCF growth rate
 - [ ] Step 3: Estimate discount rate (WACC)
-- [ ] Step 4: Project future cash flows (Years 1-5 + Terminal)
+- [ ] Step 4: Project future cash flows (Years 1-5 + Terminal via two methods)
 - [ ] Step 5: Calculate present value and fair value per share
-- [ ] Step 6: Run sensitivity analysis
+- [ ] Step 5b: Relative valuation cross-check (peer comps)
+- [ ] Step 5c: Bull / Base / Bear scenarios
+- [ ] Step 6: Run sensitivity analysis (with peer validation)
 - [ ] Step 7: Validate results
-- [ ] Step 8: Present results with caveats
+- [ ] Step 8: Present results with converging ranges
 ```
 
 ## Step 1: Gather Financial Data
@@ -62,6 +64,21 @@ Call the `financial_search` tool with these queries:
 
 **Use:** Determine appropriate WACC range from [sector-wacc.md](sector-wacc.md)
 
+### 1.7 Peer Group Data
+
+**Purpose:** Gather comparable company multiples for relative valuation cross-check.
+
+**Peer selection (8-12 companies):**
+1. Start with the sector ETF holdings (see CLAUDE.md Sector ETF Reference table)
+2. Filter to same industry using `get_company_facts` for each
+3. Prefer similar market cap range (0.3x to 3x target's market cap)
+
+**For each peer, call:**
+- `get_key_ratios_snapshot` → extract: `pe_ratio`, `ev_to_ebitda`, `ev_to_revenue`, `market_cap`
+- `get_income_statements` (limit 1, period annual) → extract: `revenue`, `revenue` YoY growth
+
+**Store:** Peer ticker, name, and all extracted metrics for Step 5b.
+
 ## Step 2: Calculate FCF Growth Rate
 
 Calculate 5-year FCF CAGR from cash flow history.
@@ -92,15 +109,53 @@ Calculate WACC using `debt_to_equity` for capital structure weights.
 
 **Years 1-5:** Apply growth rate with 5% annual decay (multiply growth rate by 0.95, 0.90, 0.85, 0.80 for years 2-5). This reflects competitive dynamics.
 
-**Terminal value:** Use Gordon Growth Model with 2.5% terminal growth (GDP proxy).
+**Terminal value (two methods — average both):**
+
+1. **Gordon Growth Model:** Terminal FCF × (1 + g) / (WACC - g), where g = 2.5% (GDP proxy)
+2. **Exit multiple:** Year 5 EBITDA × sector median EV/EBITDA (from peer data in Step 1.7)
+
+If the two methods diverge >25%, investigate why and note which is more reliable for this company. Use the average unless one method is clearly inappropriate (e.g., exit multiple unreliable if no close peers).
 
 ## Step 5: Calculate Present Value
 
 Discount all FCFs → sum for Enterprise Value → subtract Net Debt → divide by `outstanding_shares` for fair value per share.
 
+## Step 5b: Relative Valuation Cross-Check
+
+Using peer data from Step 1.7:
+
+1. **Calculate percentiles** across peers for each multiple (EV/EBITDA, P/E, EV/Revenue):
+   - 25th percentile, median, 75th percentile
+
+2. **Compute implied valuation** for the target company:
+   - Target EBITDA × peer median EV/EBITDA → implied EV → subtract net debt → per share
+   - Target earnings × peer median P/E → implied price per share
+
+3. **Compare to DCF fair value:**
+   - If DCF and peer-implied values are within 20% → high conviction zone
+   - If divergence >20% → flag and explain (growth premium? margin discount? cyclical difference?)
+
+4. **Premium/discount assessment:**
+   - Does the target deserve a premium vs. peers? (faster growth, wider moat, better margins)
+   - Or a discount? (higher leverage, lower growth, regulatory risk)
+
+## Step 5c: Bull / Base / Bear Scenarios
+
+Run three DCF scenarios using these assumption shifts:
+
+| Scenario | Growth Rate | WACC | Terminal Growth | Description |
+|----------|------------|------|-----------------|-------------|
+| **Bull** | Base +20% | Base -0.5% | 3.0% | Thesis plays out, catalysts hit |
+| **Base** | As calculated | As calculated | 2.5% | Most likely outcome |
+| **Bear** | Base -30% | Base +1.0% | 2.0% | Key risks materialize |
+
+Present three fair value estimates. The base case is the primary recommendation; bull/bear define the range.
+
 ## Step 6: Sensitivity Analysis
 
 Create 3×3 matrix: WACC (base ±1%) vs terminal growth (2.0%, 2.5%, 3.0%).
+
+**Peer validation:** Compare base WACC to the implied cost of capital from peer trading multiples. If peers trade at significantly different multiples, your WACC may need adjustment.
 
 ## Step 7: Validate Results
 
@@ -120,8 +175,21 @@ If validation fails, reconsider assumptions before presenting results.
 ## Step 8: Output Format
 
 Present a structured summary including:
-1. **Valuation Summary**: Current price vs. fair value, upside/downside percentage
+
+1. **Valuation Summary**: Bull / base / bear fair values vs. current price
 2. **Key Inputs Table**: All assumptions with their sources
-3. **Projected FCF Table**: 5-year projections with present values
-4. **Sensitivity Matrix**: 3×3 grid varying WACC (±1%) and terminal growth (2.0%, 2.5%, 3.0%)
-5. **Caveats**: Standard DCF limitations plus company-specific risks
+3. **Projected FCF Table**: 5-year projections with present values (base case)
+4. **Converging Ranges Table**: Multiple methods side by side
+
+| Method | Low | Mid | High | Source |
+|--------|-----|-----|------|--------|
+| DCF | $X | $X | $X | Bear / Base / Bull |
+| Peer EV/EBITDA | $X | $X | $X | 25th / 50th / 75th percentile |
+| Peer P/E | $X | $X | $X | 25th / 50th / 75th percentile |
+| Analyst targets | $X | $X | $X | Low / median / high |
+| 52-week range | $X | — | $X | Low / high |
+
+**Convergence zone:** $X - $X (where 3+ methods overlap)
+
+5. **Sensitivity Matrix**: 3×3 grid varying WACC (±1%) and terminal growth (2.0%, 2.5%, 3.0%)
+6. **Caveats**: Standard DCF limitations plus company-specific risks
