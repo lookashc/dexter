@@ -32,6 +32,7 @@ async function main() {
   } = await import("./tools/finance/index.js");
   const { exaSearch, perplexitySearch, tavilySearch } = await import("./tools/search/index.js");
   const { webFetchTool } = await import("./tools/fetch/index.js");
+  const { isAuthError, extractApiName, extractStatusCode, sendAuthErrorAlert } = await import("./utils/api-alerts.js");
 
   // Build MCP tool array — underlying tools only, no LLM-routed meta-tools
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,6 +115,15 @@ async function main() {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+
+      // Detect auth/payment errors (401/402/403) and send Telegram alert
+      if (isAuthError(message)) {
+        const apiName = extractApiName(message);
+        const statusCode = extractStatusCode(message);
+        // Fire-and-forget — don't block the MCP response
+        sendAuthErrorAlert(apiName, statusCode, name).catch(() => {});
+      }
+
       return {
         content: [{ type: "text", text: `Error: ${message}` }],
         isError: true,
