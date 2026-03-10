@@ -30,7 +30,7 @@ async function main() {
     getInsiderTrades,
     getCompanyFacts,
   } = await import("./tools/finance/index.js");
-  const { exaSearch, perplexitySearch, tavilySearch } = await import("./tools/search/index.js");
+  const { exaSearch, perplexitySearch, tavilySearch, xSearchTool } = await import("./tools/search/index.js");
   const { webFetchTool } = await import("./tools/fetch/index.js");
 
   // Build MCP tool array — underlying tools only, no LLM-routed meta-tools
@@ -57,6 +57,8 @@ async function main() {
       : process.env.PERPLEXITY_API_KEY ? [perplexitySearch]
       : process.env.TAVILY_API_KEY ? [tavilySearch]
       : []),
+    // X/Twitter search (requires X_BEARER_TOKEN)
+    ...(process.env.X_BEARER_TOKEN ? [xSearchTool] : []),
   ];
 
   // Helper to convert tool schema to JSON Schema
