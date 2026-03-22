@@ -23,12 +23,11 @@ async function main() {
   const {
     getIncomeStatements, getBalanceSheets, getCashFlowStatements, getAllFinancialStatements,
     getFilings, get10KFilingItems, get10QFilingItems, get8KFilingItems,
-    getPriceSnapshot, getPrices,
-    getKeyRatiosSnapshot, getKeyRatios,
-    getNews, getAnalystEstimates, getSegmentedRevenues,
+    getStockPrice, getStockPrices,
+    getKeyRatios, getHistoricalKeyRatios,
+    getCompanyNews, getAnalystEstimates, getSegmentedRevenues,
     getCryptoPriceSnapshot, getCryptoPrices, getCryptoTickers,
     getInsiderTrades,
-    getCompanyFacts,
   } = await import("./tools/finance/index.js");
   const { exaSearch, perplexitySearch, tavilySearch, xSearchTool } = await import("./tools/search/index.js");
   const { webFetchTool } = await import("./tools/fetch/index.js");
@@ -41,15 +40,13 @@ async function main() {
     // SEC Filings
     getFilings, get10KFilingItems, get10QFilingItems, get8KFilingItems,
     // Prices
-    getPriceSnapshot, getPrices,
+    getStockPrice, getStockPrices,
     // Crypto
     getCryptoPriceSnapshot, getCryptoPrices, getCryptoTickers,
     // Key Ratios
-    getKeyRatiosSnapshot, getKeyRatios,
+    getKeyRatios, getHistoricalKeyRatios,
     // Other
-    getNews, getAnalystEstimates, getSegmentedRevenues, getInsiderTrades,
-    // Company info
-    getCompanyFacts,
+    getCompanyNews, getAnalystEstimates, getSegmentedRevenues, getInsiderTrades,
     // Web content extraction
     webFetchTool,
     // Web search (priority: Exa > Perplexity > Tavily)
@@ -88,7 +85,7 @@ async function main() {
 
   // List available tools
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: MCP_TOOLS.map((tool) => ({
+    tools: MCP_TOOLS.filter(Boolean).map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: getJsonSchema(tool.schema),
